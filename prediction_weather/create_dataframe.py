@@ -19,7 +19,7 @@ def create_dataframe(file_path):
 
     # 컬럼명 정의
     columns = [
-        "TM", "STN", "WD", "WS", "GST", "VS", "RVR1", "RVR2", "WC", "CA",
+        "DateTime", "STN", "WD", "WS", "GST", "VS", "RVR1", "RVR2", "WC", "CA",
         "CA1", "CT1", "CH1", "CA2", "CT2", "CH2", "CA3", "CT3", "CH3", "CA4",
         "CT4", "CH4", "TA", "TD", "HM", "PA", "PS", "RN"
     ]
@@ -27,8 +27,8 @@ def create_dataframe(file_path):
     # DataFrame 생성
     df = pd.DataFrame(data, columns=columns)
 
-    # TM 열을 datetime 형식으로 변환
-    df['TM'] = pd.to_datetime(df['TM'], format='%Y%m%d%H%M')
+    # DateTime 열을 datetime 형식으로 변환
+    df['DateTime'] = pd.to_datetime(df['DateTime'], format='%Y%m%d%H%M')
 
     return df
 
@@ -42,18 +42,18 @@ weather_df = create_dataframe(file_path)
 split_date = pd.to_datetime('20250901', format='%Y%m%d')
 
 # Train/Validation과 Test 데이터 분리
-train_val_df = weather_df[weather_df['TM'] < split_date]
-test_df = weather_df[weather_df['TM'] >= split_date]
+train_val_df = weather_df[weather_df['DateTime'] < split_date]
+test_df = weather_df[weather_df['DateTime'] >= split_date]
 
 # Train/Validation과 Test 데이터를 각각 CSV 파일로 저장
 train_val_df.to_csv('G:\\Weather_Data\\prediction_weather\\train_val_data.csv', index=False, encoding='utf-8')
 test_df.to_csv('G:\\Weather_Data\\prediction_weather\\test_data.csv', index=False, encoding='utf-8')
 
 # 결과 확인
-print("Train/Validation Data:")
-print(train_val_df.head())
-print(train_val_df.info())
+# print("Train/Validation Data:")
+# print(train_val_df.head())
+# print(train_val_df.info())
 
-print("\nTest Data:")
-print(test_df.head())
-print(test_df.info())
+# print("\nTest Data:")
+# print(test_df.head())
+# print(test_df.info())
