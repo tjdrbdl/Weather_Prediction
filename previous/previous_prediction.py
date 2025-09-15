@@ -72,7 +72,7 @@ def encode_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     범주형 인코딩
       - T16/T19/T22/T25 : 순서형(구름량) -> SKC<FEW<SCT<BKN<OVC
-      - T15, S2 : 간단 LabelEncoding (훈련/추론에서 동일하게 fit_transform 사용한 당신의 최종 흐름을 반영)
+      - T15, S2 : 간단 LabelEncoding (훈련/추론에서 동일하게 fit_transform 사용한 최종 흐름을 반영)
     """
     df = df.copy()
 
