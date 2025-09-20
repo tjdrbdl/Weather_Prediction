@@ -11,7 +11,6 @@ def create_dataframe(file_path):
     # 주석 제거 및 데이터 분리
     data_lines = [line.strip() for line in text_data.splitlines() if not line.startswith('#') and line.strip()]
 
-    # 데이터 프레임 생성을 위한 데이터 준비
     data = []
     for line in data_lines:
         values = line.replace(',=', '').split(',')
