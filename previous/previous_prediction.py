@@ -20,37 +20,8 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import glob
 
-# ========== 피처 엔지니어링 ==========
-
-def calculate_risk_score(text: str) -> int:
-    """
-    T15, S2 같은 기상 현상 코드 텍스트를 기반으로 위험 점수를 계산.
-    - 강도(+/-), 현상 코드(RA, SN, FG 등)에 따라 점수를 차등 부여.
-    """
-    if pd.isna(text): return 0
-    score = 0
-    tokens = text.split()
-    for token in tokens:
-        # 강도에 따른 기본 점수: '+'(강함)=3, '-'(약함)=1, 보통=2
-        base = 3 if token.startswith('+') else (1 if token.startswith('-') else 2)
-        code = token[1:] if token[0] in "+-" else token
-        # 특정 기상 현상에 가중치 부여
-        if code in {'RA','SN','SG','PL','GR','GS'}: base += 2  # 강수
-        elif code in {'FG','BR','HZ','SA','DU'}: base += 2  # 시정 방해
-        elif code in {'FC','SS','DS'}: base += 5  # 위험 기상
-        score += base
-    return score
-
-def add_weather_risk_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    'T15'와 'S2' 컬럼에 대해 `calculate_risk_score`를 적용하여
-    'T15_risk', 'S2_risk', 'weather_risk_score' 파생 변수를 추가.
-    """
-    df['T15_risk'] = df['T15'].apply(lambda x: calculate_risk_score(str(x))) if 'T15' in df.columns else 0
-    df['S2_risk'] = df['S2'].apply(lambda x: calculate_risk_score(str(x))) if 'S2' in df.columns else 0
-    df['weather_risk_score'] = df['T15_risk'] + df['S2_risk']
-    return df
 
 # ========== 전처리 및 피처 선택 ==========
 
@@ -114,7 +85,6 @@ def encode_and_clean(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             le = LabelEncoder()
             df[col] = le.fit_transform(df[col])
-    df = add_weather_risk_features(df)
     return df
 
 # ========== 일자 집계 & 타깃 생성 ==========
