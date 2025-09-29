@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from typing import Dict
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.ensemble import (
     RandomForestRegressor,
     GradientBoostingRegressor,
@@ -149,8 +151,9 @@ def train_models(
         X_tr, X_va = X_t.loc[~is_val], X_t.loc[is_val]
         y_tr, y_va = y_t.loc[~is_val], y_t.loc[is_val]
 
-        # (선택) 중요일 가중(예: min_visibility 기준)
+        # w_tr 변수를 루프 시작 전에 None으로 초기화합니다.
         w_tr = None
+        # (선택) 중요일 가중(예: min_visibility 기준)
         if use_weight and "min_visibility" in target:
             w_tr = np.where(y_tr < 5000, 3.0, 1.0)
 
@@ -247,6 +250,19 @@ def train_models(
         print(msg)
         models[target] = best
 
+        # ----- 피처 중요도 시각화 -----
+        # 파이프라인이 아닌 단일 모델이고, feature_importances_ 속성이 있는 경우
+        if hasattr(best, 'feature_importances_'):
+            importances = pd.Series(best.feature_importances_, index=X_tr.columns)
+            top20 = importances.sort_values(ascending=False).head(20)
+            
+            plt.figure(figsize=(10, 8))
+            sns.barplot(x=top20.values, y=top20.index)
+            plt.title(f'Feature Importance for [{target}] (Top 20)')
+            plt.tight_layout()
+            plt.savefig(f'feature_importance_{target}.png')
+            plt.close()
+
     return models
 
 
@@ -296,6 +312,12 @@ def run_pipeline(train_csv: str, test_csv: str, out_csv: str = "predictions.csv"
     # 예측 결과는 D일의 값이 됩니다. 따라서 날짜도 D일에 맞춰줍니다.
     pred_dates = test_daily["date"].iloc[1:]
 
+    # ----- 실제 테스트 타깃 생성 및 저장 -----
+    test_target_df = generate_target(test_daily)
+    # 예측 기간과 동일하게 날짜를 맞춰줍니다.
+    actual_df = test_target_df[test_target_df['date'].isin(pred_dates)]
+    actual_df.to_csv("actuals_test.csv", index=False, encoding="utf-8")
+
     preds = {t: models[t].predict(X_test) for t in target_cols}
     pred_df = pd.DataFrame({"date": pred_dates, **preds})
 
@@ -312,6 +334,49 @@ def run_pipeline(train_csv: str, test_csv: str, out_csv: str = "predictions.csv"
 
     pred_df.to_csv(out_csv, index=False, encoding="utf-8")
     print(f"Saved -> {out_csv}")
+
+    # 9) 결과 시각화
+    visualize_results(pred_df, actual_df)
+
+
+# ========== 결과 시각화 함수 ==========
+def visualize_results(pred_df, actual_df):
+    """예측값과 실제값을 비교하는 시계열/산점도 그래프 생성"""
+    # 날짜 컬럼을 datetime으로 변환
+    pred_df['date'] = pd.to_datetime(pred_df['date'])
+    actual_df['date'] = pd.to_datetime(actual_df['date'])
+    
+    # 공통 날짜로 데이터 병합
+    merged_df = pd.merge(actual_df, pred_df, on='date', suffixes=('_actual', '_pred'))
+    
+    for target in ["min_visibility", "recovery_1mile", "recovery_3mile"]:
+        target_actual = f"{target}_actual"
+        target_pred = f"{target}_pred"
+
+        plt.figure(figsize=(15, 10))
+
+        # 1. 시계열 그래프
+        plt.subplot(2, 1, 1)
+        plt.plot(merged_df['date'], merged_df[target_actual], 'o-', label='Actual')
+        plt.plot(merged_df['date'], merged_df[target_pred], 'o-', label='Predicted')
+        plt.title(f'Time Series: Actual vs. Predicted for [{target}]')
+        plt.ylabel(target)
+        plt.legend()
+        plt.grid(True)
+
+        # 2. 산점도 그래프
+        plt.subplot(2, 1, 2)
+        sns.regplot(x=merged_df[target_actual], y=merged_df[target_pred], line_kws={'color': 'red'})
+        plt.title(f'Scatter Plot: Actual vs. Predicted for [{target}]')
+        plt.xlabel('Actual Values')
+        plt.ylabel('Predicted Values')
+        plt.grid(True)
+        
+        plt.tight_layout()
+        plt.savefig(f'result_visualization_{target}.png')
+        plt.close()
+        print(f"Saved -> result_visualization_{target}.png")
+
 
 if __name__ == "__main__":
     run_pipeline(
